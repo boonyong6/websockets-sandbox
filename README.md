@@ -56,7 +56,7 @@
 
 ### Format
 
-- Frame format:
+- Frame format:<br />
   ![frame-format](images/frame-format.png)
 - The server must **disconnect** from a client if that client sends an **unmasked message**.
 - **Server-sent data** is not masked.
@@ -99,3 +99,41 @@
     Client: FIN=1, opcode=0x0, msg="year!"
     Server: (process complete message) Happy new year to you too!
     ```
+
+## Pings and Pongs: The Heartbeat of WebSockets
+
+- Either side can send a ping, and the recipient must send back a pong as soon as possible.
+- **Use case:** To make sure that the client is still connected.
+- A ping or pong is a **control frame**.
+- **Pings** have an opcode of `0x9`.
+- **Pongs** have an opcode of `0xA`.
+- The max payload length is 125.
+- Ignore any unexpected pong.
+
+## Closing the connection
+
+- Either side can send a **control frame** (opcode: `0x8`) with data containing a specified control sequence to begin the closing handshake. The other peer sends a **Close frame** in response.
+
+## Miscellaneous
+
+### Extensions
+
+- **Modify** the payload (e.g. compression).
+
+### Subprotocols
+
+- **Structure** the WebSocket payload and **never modify** anything (e.g. chat, games). 
+- Just establish the structure.
+- Handshake request example:
+  ```http
+  GET /chat HTTP/1.1
+  ...
+  Sec-WebSocket-Protocol: soap, wamp
+  ```
+  or:
+  ```http
+  ...
+  Sec-WebSocket-Protocol: soap
+  Sec-WebSocket-Protocol: wamp
+  ```
+- Naming convention - `<subprotocol-name>.<domain-name>`. E.g. `chat.example.com`
