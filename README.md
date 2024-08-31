@@ -127,12 +127,10 @@
 - Handshake request example:
   ```http
   GET /chat HTTP/1.1
-  ### ...
   Sec-WebSocket-Protocol: soap, wamp
   ```
   or:
   ```http
-  ### ...
   Sec-WebSocket-Protocol: soap
   Sec-WebSocket-Protocol: wamp
   ```
