@@ -11,6 +11,7 @@
         height: 10em;
         margin-bottom: 0.5em;
         padding: 0.5em;
+        overflow-y: scroll;
       }
 
       div {
@@ -19,46 +20,126 @@
     </style>
   </head>
   <body>
-    <p id="bufferedAmount">Buffered Amount: 0</p>
-
     <div id="chatbox">[chatbox] Messages go here...</div>
 
     <div>
-      <input type="text" name="msg" id="text" />
+      <input type="text" name="msg" id="text" value="Hello WebSockets!" />
       <button onclick="sendText()">Send</button>
     </div>
-    <div><button onclick="closeConnection()">Close WebSocket</button></div>
+    <div>
+      <button onclick="openConnection()">Open WebSocket</button>
+      <button onclick="closeConnection()">Close WebSocket</button>
+    </div>
 
     <div id="userlistbox"></div>
 
     <script>
-      const clientID = "380f826d-a6f4-4f5f-97ab-ba03a6abb7cb"; // crypto.randomUUID()
+      let exampleSocket;
+      const clientId = crypto.randomUUID();
 
-      // 1. Creating a WebSocket object. (exampleSocket.readyState - CONNECTING (initial) -> OPEN)
-      const exampleSocket = new WebSocket(
-        "wss://www.example.com/socketserver",
-        "protocolOne"
-      );
+      openConnection();
 
-      const bufferedAmountElt = document.getElementById("bufferedAmount");
-      setInterval(function () {
-        bufferedAmountElt.innerHTML = `Buffered Amount: ${exampleSocket.bufferedAmount}`;
-      }, 1000);
+      // Step 1, 2, 3.
+      function openConnection() {
+        if (exampleSocket && exampleSocket.readyState !== WebSocket.CLOSED) {
+          appendMessage(`(${(new Date()).toLocaleTimeString()}) => WebSockets is not closed!`);
+          return;
+        }
 
-      // 2. Sending data (string, Blob, ArrayBuffer) to the server.
-      exampleSocket.onopen = (event) => {
-        exampleSocket.send(
-          "Here's some text that the server is urgently awaiting!"
+        appendMessage(`(${(new Date()).toLocaleTimeString()}) => Connecting to the WebSockets server...`);
+
+        // 1. Creating a WebSocket object. (exampleSocket.readyState - CONNECTING (initial) -> OPEN)
+        exampleSocket = new WebSocket(
+          "ws://localhost:8082/chat"
+          // "protocolOne"
         );
-      };
 
-      // Send text to all users through the server
+        // 2. Sending data (string, Blob, ArrayBuffer) to the server.
+        exampleSocket.onopen = (event) => {
+          // exampleSocket.send(
+          //   "Here's some text that the server is urgently awaiting!"
+          // );
+          exampleSocket.send(
+            JSON.stringify({
+              type: "message",
+              name: "WebSockets Server",
+              text: `You are connected.`,
+              id: clientId,
+              date: Date.now(),
+            })
+          );
+        };
+
+        // 3. Receiving messages from the server via the onmessage event handler.
+        exampleSocket.onmessage = (event) => {
+          let text = "";
+          const msg = JSON.parse(event.data);
+          const time = new Date(msg.date);
+          const timeStr = time.toLocaleTimeString();
+
+          switch (msg.type) {
+            case "id":
+              clientId = msg.id;
+              console.log("Setting the username...");
+              break;
+            case "username":
+              text = `User <em>${msg.name}</em> signed in at ${timeStr}<br>`;
+              break;
+            case "message":
+              text = `(${timeStr}) ${msg.name} : ${msg.text} <br>`;
+              break;
+            case "rejectusername":
+              text = `Your username has been set to <em>${msg.name}</em> because the name you chose is in use.<br>`;
+              break;
+            case "userlist":
+              document.getElementById("userlistbox").innerText =
+                msg.users.join("\n");
+              break;
+          }
+
+          if (text.length) {
+            // const textElt = document.createElement("p");
+            // textElt.innerHTML = text;
+            // document.getElementById("chatbox").append(textElt);
+            appendMessage(text);
+          }
+        };
+        
+        exampleSocket.onerror = (evt) => {
+          setTimeout(openConnection, 2000);
+        };
+      }
+
+      // Step 4.
+      function closeConnection() {
+        if (exampleSocket.readyState !== WebSocket.OPEN) {
+          console.log("WebSocket is not open.");
+          return;
+        }
+
+        exampleSocket.close();
+        appendMessage(`(${(new Date()).toLocaleTimeString()}) => The client closed the WebSockets connection.`)
+      }
+
+      // Send text to the server
       function sendText() {
+        const text = document.getElementById("text").value;
+
+        if (!text) {
+          return;
+        }
+
+        if (exampleSocket && exampleSocket.readyState !== WebSocket.OPEN) {
+          appendMessage(`(${(new Date()).toLocaleTimeString()}) => You can't send a message while the WebSockets is not open.`);
+          return;
+        }
+
         // Construct a msg object containing the data the server needs to process the message from the chat client.
         const msg = {
           type: "message",
-          text: document.getElementById("text").value,
-          id: clientID,
+          name: "John",
+          text: text,
+          id: clientId,
           date: Date.now(),
         };
 
@@ -69,50 +150,13 @@
         document.getElementById("text").value = "";
       }
 
-      // 3. Receiving messages from the server via the onmessage event handler.
-      exampleSocket.onmessage = (event) => {
-        let text = "";
-        const msg = JSON.parse(event.data);
-        const time = new Date(msg.date);
-        const timeStr = time.toLocaleDateString();
+      function appendMessage(message) {
+        const msgElt = document.createElement("p");
+        msgElt.innerHTML = message;
 
-        switch (msg.type) {
-          case "id":
-            clientID = msg.id;
-            setUsername();
-            break;
-          case "username":
-            text = `User <em>${msg.name}</em> signed in at ${timeStr}<br>`;
-            break;
-          case "message":
-            text = `(${timeStr}) ${msg.name} : ${msg.text} <br>`;
-            break;
-          case "rejectusername":
-            text = `Your username has been set to <em>${msg.name}</em> because the name you chose is in use.<br>`;
-            break;
-          case "userlist":
-            document.getElementById("userlistbox").innerText =
-              msg.users.join("\n");
-            break;
-        }
-
-        if (text.length) {
-          document.getElementById("chatbox").innerHTML = text;
-        }
-      };
-
-      function setUsername() {
-        console.log("Setting the username...");
-      }
-
-      // 4. Closing the connection.
-      function closeConnection() {
-        if (exampleSocket.readyState !== WebSocket.OPEN) {
-          console.log("WebSocket is not open.");
-          return;
-        }
-
-        exampleSocket.close();
+        const chatboxElt = document.getElementById("chatbox");
+        chatboxElt.append(msgElt);
+        chatboxElt.scrollTop = chatboxElt.scrollHeight;
       }
     </script>
   </body>
