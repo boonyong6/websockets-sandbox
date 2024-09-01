@@ -41,7 +41,7 @@
 - A special response that indicates that the protocol will be changing from HTTP to WebSocket.
 - Server can decide on **extension/subprotocol** requests here.
 - Steps to compute the `Sec-WebSocket-Accept` header:
-  1. **Concatenate** the `Sec-WebSocket-Key` header and the "`258EAFA5-E914-47DA-95CA-C5AB0DC85B11`".
+  1. **Concatenate** the `Sec-WebSocket-Key` header and the "`258EAFA5-E914-47DA-95CA-C5AB0DC85B11`" (a special UUID specified by RFC 6455).
   2. Compute the **SHA-1 hash** of the concatenated string.
   3. Encode the hash in **base64** encoding.
 - The `Sec-WebSocket-Accept` header indicates that the server supports WebSockets.
